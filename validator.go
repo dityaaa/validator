@@ -462,40 +462,39 @@ OUTER:
 			v.ct = ct
 
 			valid, skipped := ct.fn(ctx, v)
-			if valid {
-				if !skipped {
-					return
+			if !valid {
+				v.str1 = string(append(ns, cf.altName...))
+
+				if v.v.hasTagNameFunc {
+					v.str2 = string(append(structNs, cf.name...))
+				} else {
+					v.str2 = v.str1
 				}
 
-				ct = ct.next
-				continue
+				v.errs = append(v.errs,
+					&fieldError{
+						v:              v.v,
+						tag:            ct.aliasTag,
+						actualTag:      ct.tag,
+						ns:             v.str1,
+						structNs:       v.str2,
+						fieldLen:       uint8(len(cf.altName)),
+						structfieldLen: uint8(len(cf.name)),
+						value:          getValue(current),
+						param:          ct.param,
+						kind:           kind,
+						typ:            typ,
+					},
+				)
+
+				return
 			}
 
-			v.str1 = string(append(ns, cf.altName...))
-
-			if v.v.hasTagNameFunc {
-				v.str2 = string(append(structNs, cf.name...))
-			} else {
-				v.str2 = v.str1
+			if valid && skipped {
+				return
 			}
 
-			v.errs = append(v.errs,
-				&fieldError{
-					v:              v.v,
-					tag:            ct.aliasTag,
-					actualTag:      ct.tag,
-					ns:             v.str1,
-					structNs:       v.str2,
-					fieldLen:       uint8(len(cf.altName)),
-					structfieldLen: uint8(len(cf.name)),
-					value:          getValue(current),
-					param:          ct.param,
-					kind:           kind,
-					typ:            typ,
-				},
-			)
-
-			return
+			ct = ct.next
 		}
 	}
 
