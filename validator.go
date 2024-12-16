@@ -358,9 +358,12 @@ OUTER:
 				v.cf = cf
 				v.ct = ct
 
-				// TODO: check if the next validation is skipped
-				valid, _ := ct.fn(ctx, v)
+				valid, skipped := ct.fn(ctx, v)
 				if valid {
+					if skipped {
+						return
+					}
+
 					if ct.isBlockEnd {
 						ct = ct.next
 						continue OUTER
@@ -459,39 +462,39 @@ OUTER:
 			v.ct = ct
 
 			valid, skipped := ct.fn(ctx, v)
-			if !valid {
-				v.str1 = string(append(ns, cf.altName...))
-
-				if v.v.hasTagNameFunc {
-					v.str2 = string(append(structNs, cf.name...))
-				} else {
-					v.str2 = v.str1
+			if valid {
+				if skipped {
+					return
 				}
 
-				v.errs = append(v.errs,
-					&fieldError{
-						v:              v.v,
-						tag:            ct.aliasTag,
-						actualTag:      ct.tag,
-						ns:             v.str1,
-						structNs:       v.str2,
-						fieldLen:       uint8(len(cf.altName)),
-						structfieldLen: uint8(len(cf.name)),
-						value:          getValue(current),
-						param:          ct.param,
-						kind:           kind,
-						typ:            typ,
-					},
-				)
-
-				return
+				ct = ct.next
 			}
 
-			if skipped {
-				return
+			v.str1 = string(append(ns, cf.altName...))
+
+			if v.v.hasTagNameFunc {
+				v.str2 = string(append(structNs, cf.name...))
+			} else {
+				v.str2 = v.str1
 			}
 
-			ct = ct.next
+			v.errs = append(v.errs,
+				&fieldError{
+					v:              v.v,
+					tag:            ct.aliasTag,
+					actualTag:      ct.tag,
+					ns:             v.str1,
+					structNs:       v.str2,
+					fieldLen:       uint8(len(cf.altName)),
+					structfieldLen: uint8(len(cf.name)),
+					value:          getValue(current),
+					param:          ct.param,
+					kind:           kind,
+					typ:            typ,
+				},
+			)
+
+			return
 		}
 	}
 
