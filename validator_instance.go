@@ -74,7 +74,7 @@ type CustomTypeFunc func(field reflect.Value) interface{}
 type TagNameFunc func(field reflect.StructField) string
 
 type internalValidationFuncWrapper struct {
-	fn                 FuncCtx
+	fn                 SkippableFuncCtx
 	runValidationOnNil bool
 }
 
@@ -131,10 +131,10 @@ func New(options ...Option) *Validate {
 		case requiredIfTag, requiredUnlessTag, requiredWithTag, requiredWithAllTag, requiredWithoutTag, requiredWithoutAllTag,
 			excludedIfTag, excludedUnlessTag, excludedWithTag, excludedWithAllTag, excludedWithoutTag, excludedWithoutAllTag,
 			skipUnlessTag:
-			_ = v.registerValidation(k, wrapFunc(val), true, true)
+			_ = v.registerValidation(k, wrapFuncToSkippableCtx(val), true, true)
 		default:
 			// no need to error check here, baked in will always be valid
-			_ = v.registerValidation(k, wrapFunc(val), true, false)
+			_ = v.registerValidation(k, wrapFuncToSkippableCtx(val), true, false)
 		}
 	}
 
@@ -222,6 +222,10 @@ func (v *Validate) RegisterValidation(tag string, fn Func, callValidationEvenIfN
 	return v.RegisterValidationCtx(tag, wrapFunc(fn), callValidationEvenIfNull...)
 }
 
+func (v *Validate) RegisterSkippableValidation(tag string, fn SkippableFunc, callValidationEvenIfNull ...bool) error {
+	return v.RegisterSkippableValidationCtx(tag, wrapSkippableFunc(fn), callValidationEvenIfNull...)
+}
+
 // RegisterValidationCtx does the same as RegisterValidation on accepts a FuncCtx validation
 // allowing context.Context validation support.
 func (v *Validate) RegisterValidationCtx(tag string, fn FuncCtx, callValidationEvenIfNull ...bool) error {
@@ -229,10 +233,18 @@ func (v *Validate) RegisterValidationCtx(tag string, fn FuncCtx, callValidationE
 	if len(callValidationEvenIfNull) > 0 {
 		nilCheckable = callValidationEvenIfNull[0]
 	}
+	return v.registerValidation(tag, wrapFuncCtx(fn), false, nilCheckable)
+}
+
+func (v *Validate) RegisterSkippableValidationCtx(tag string, fn SkippableFuncCtx, callValidationEvenIfNull ...bool) error {
+	var nilCheckable bool
+	if len(callValidationEvenIfNull) > 0 {
+		nilCheckable = callValidationEvenIfNull[0]
+	}
 	return v.registerValidation(tag, fn, false, nilCheckable)
 }
 
-func (v *Validate) registerValidation(tag string, fn FuncCtx, bakedIn bool, nilCheckable bool) error {
+func (v *Validate) registerValidation(tag string, fn SkippableFuncCtx, bakedIn bool, nilCheckable bool) error {
 	if len(tag) == 0 {
 		return errors.New("function Key cannot be empty")
 	}

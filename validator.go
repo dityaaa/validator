@@ -10,24 +10,25 @@ import (
 
 // per validate construct
 type validate struct {
-	v              *Validate
-	top            reflect.Value
-	ns             []byte
-	actualNs       []byte
-	errs           ValidationErrors
-	includeExclude map[string]struct{} // reset only if StructPartial or StructExcept are called, no need otherwise
-	ffn            FilterFunc
-	slflParent     reflect.Value // StructLevel & FieldLevel
-	slCurrent      reflect.Value // StructLevel & FieldLevel
-	flField        reflect.Value // StructLevel & FieldLevel
-	cf             *cField       // StructLevel & FieldLevel
-	ct             *cTag         // StructLevel & FieldLevel
-	misc           []byte        // misc reusable
-	str1           string        // misc reusable
-	str2           string        // misc reusable
-	fldIsPointer   bool          // StructLevel & FieldLevel
-	isPartial      bool
-	hasExcludes    bool
+	v               *Validate
+	top             reflect.Value
+	ns              []byte
+	actualNs        []byte
+	errs            ValidationErrors
+	includeExclude  map[string]struct{} // reset only if StructPartial or StructExcept are called, no need otherwise
+	ffn             FilterFunc
+	slflParent      reflect.Value // StructLevel & FieldLevel
+	slCurrent       reflect.Value // StructLevel & FieldLevel
+	flField         reflect.Value // StructLevel & FieldLevel
+	flOriginalField reflect.Value // FieldLevel
+	cf              *cField       // StructLevel & FieldLevel
+	ct              *cTag         // StructLevel & FieldLevel
+	misc            []byte        // misc reusable
+	str1            string        // misc reusable
+	str2            string        // misc reusable
+	fldIsPointer    bool          // StructLevel & FieldLevel
+	isPartial       bool
+	hasExcludes     bool
 }
 
 // parent and current will be the same the first run of validateStruct
@@ -98,6 +99,7 @@ func (v *validate) traverseField(ctx context.Context, parent reflect.Value, curr
 	var typ reflect.Type
 	var kind reflect.Kind
 
+	originalCurrent := current
 	current, kind, v.fldIsPointer = v.extractTypeInternal(current, false)
 
 	var isNestedStruct bool
@@ -356,7 +358,9 @@ OUTER:
 				v.cf = cf
 				v.ct = ct
 
-				if ct.fn(ctx, v) {
+				// TODO: check if the next validation is skipped
+				valid, _ := ct.fn(ctx, v)
+				if valid {
 					if ct.isBlockEnd {
 						ct = ct.next
 						continue OUTER
@@ -450,10 +454,12 @@ OUTER:
 			// set Field Level fields
 			v.slflParent = parent
 			v.flField = current
+			v.flOriginalField = originalCurrent
 			v.cf = cf
 			v.ct = ct
 
-			if !ct.fn(ctx, v) {
+			valid, skipped := ct.fn(ctx, v)
+			if !valid {
 				v.str1 = string(append(ns, cf.altName...))
 
 				if v.v.hasTagNameFunc {
@@ -480,6 +486,11 @@ OUTER:
 
 				return
 			}
+
+			if skipped {
+				return
+			}
+
 			ct = ct.next
 		}
 	}

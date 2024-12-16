@@ -90,7 +90,7 @@ type cTag struct {
 	param                string
 	keys                 *cTag // only populated when using tag's 'keys' and 'endkeys' for map key validation
 	next                 *cTag
-	fn                   FuncCtx
+	fn                   SkippableFuncCtx
 	typeof               tagType
 	hasTag               bool
 	hasAlias             bool

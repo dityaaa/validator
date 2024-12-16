@@ -30,9 +30,22 @@ import (
 // value should be true when validation succeeds.
 type Func func(fl FieldLevel) bool
 
+type SkippableFunc func(fl FieldLevel) (bool, bool)
+
 // FuncCtx accepts a context.Context and FieldLevel interface for all
 // validation needs. The return value should be true when validation succeeds.
 type FuncCtx func(ctx context.Context, fl FieldLevel) bool
+
+type SkippableFuncCtx func(ctx context.Context, fl FieldLevel) (bool, bool)
+
+func wrapSkippableFunc(fn SkippableFunc) SkippableFuncCtx {
+	if fn == nil {
+		return nil // be sure not to wrap a bad function.
+	}
+	return func(_ context.Context, fl FieldLevel) (bool, bool) {
+		return fn(fl)
+	}
+}
 
 // wrapFunc wraps normal Func makes it compatible with FuncCtx
 func wrapFunc(fn Func) FuncCtx {
@@ -41,6 +54,25 @@ func wrapFunc(fn Func) FuncCtx {
 	}
 	return func(ctx context.Context, fl FieldLevel) bool {
 		return fn(fl)
+	}
+}
+
+func wrapFuncToSkippableCtx(fn Func) SkippableFuncCtx {
+	if fn == nil {
+		return nil // be sure not to wrap a bad function.
+	}
+
+	return func(ctx context.Context, fl FieldLevel) (bool, bool) {
+		return fn(fl), false
+	}
+}
+
+func wrapFuncCtx(fn FuncCtx) SkippableFuncCtx {
+	if fn == nil {
+		return nil // be sure not to wrap a bad function.
+	}
+	return func(ctx context.Context, fl FieldLevel) (bool, bool) {
+		return fn(ctx, fl), false
 	}
 }
 

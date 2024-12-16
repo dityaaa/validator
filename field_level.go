@@ -16,6 +16,9 @@ type FieldLevel interface {
 	// Field returns current field for validation
 	Field() reflect.Value
 
+	// OriginalField returns the original field value before any field extraction (RegisterCustomTypeFunc)
+	OriginalField() reflect.Value
+
 	// FieldName returns the field's name with the tag
 	// name taking precedence over the fields actual name.
 	FieldName() string
@@ -68,6 +71,11 @@ var _ FieldLevel = new(validate)
 // Field returns current field for validation
 func (v *validate) Field() reflect.Value {
 	return v.flField
+}
+
+// OriginalField returns the original field value before any field extraction (RegisterCustomTypeFunc)
+func (v *validate) OriginalField() reflect.Value {
+	return v.flOriginalField
 }
 
 // FieldName returns the field's name with the tag
