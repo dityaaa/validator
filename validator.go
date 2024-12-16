@@ -463,11 +463,12 @@ OUTER:
 
 			valid, skipped := ct.fn(ctx, v)
 			if valid {
-				if skipped {
+				if !skipped {
 					return
 				}
 
 				ct = ct.next
+				continue
 			}
 
 			v.str1 = string(append(ns, cf.altName...))

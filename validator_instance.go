@@ -229,11 +229,7 @@ func (v *Validate) RegisterSkippableValidation(tag string, fn SkippableFunc, cal
 // RegisterValidationCtx does the same as RegisterValidation on accepts a FuncCtx validation
 // allowing context.Context validation support.
 func (v *Validate) RegisterValidationCtx(tag string, fn FuncCtx, callValidationEvenIfNull ...bool) error {
-	var nilCheckable bool
-	if len(callValidationEvenIfNull) > 0 {
-		nilCheckable = callValidationEvenIfNull[0]
-	}
-	return v.registerValidation(tag, wrapFuncCtx(fn), false, nilCheckable)
+	return v.RegisterSkippableValidationCtx(tag, wrapFuncCtx(fn), callValidationEvenIfNull...)
 }
 
 func (v *Validate) RegisterSkippableValidationCtx(tag string, fn SkippableFuncCtx, callValidationEvenIfNull ...bool) error {
