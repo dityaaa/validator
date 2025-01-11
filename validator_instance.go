@@ -85,6 +85,7 @@ type Validate struct {
 	tagNameFunc            TagNameFunc
 	structLevelFuncs       map[reflect.Type]StructLevelFuncCtx
 	customFuncs            map[reflect.Type]CustomTypeFunc
+	customGenericFuncs     map[string]CustomTypeFunc
 	aliases                map[string]string
 	validations            map[string]internalValidationFuncWrapper
 	transTagFunc           map[ut.Translator]map[string]TranslationFunc // map[<locale>]map[<tag>]TranslationFunc
@@ -341,6 +342,22 @@ func (v *Validate) RegisterCustomTypeFunc(fn CustomTypeFunc, types ...interface{
 
 	for _, t := range types {
 		v.customFuncs[reflect.TypeOf(t)] = fn
+	}
+
+	v.hasCustomFuncs = true
+}
+
+func (v *Validate) RegisterCustomGenericTypeFunc(fn CustomTypeFunc, types ...interface{}) {
+	if v.customGenericFuncs == nil {
+		v.customGenericFuncs = make(map[string]CustomTypeFunc)
+	}
+
+	for _, t := range types {
+		typeWithoutGenericArgs := reflect.TypeOf(t).PkgPath() + "." + reflect.TypeOf(t).Name()
+		if idx := strings.Index(typeWithoutGenericArgs, "["); idx != -1 {
+			typeWithoutGenericArgs = typeWithoutGenericArgs[:idx]
+		}
+		v.customGenericFuncs[typeWithoutGenericArgs] = fn
 	}
 
 	v.hasCustomFuncs = true

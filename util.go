@@ -49,6 +49,15 @@ BEGIN:
 				current = reflect.ValueOf(fn(current))
 				goto BEGIN
 			}
+
+			typeWithoutGenericArgs := current.Type().PkgPath() + "." + current.Type().Name()
+			if idx := strings.Index(typeWithoutGenericArgs, "["); idx != -1 {
+				typeWithoutGenericArgs = typeWithoutGenericArgs[:idx]
+			}
+			if fn, ok := v.v.customGenericFuncs[typeWithoutGenericArgs]; ok {
+				current = reflect.ValueOf(fn(current))
+				goto BEGIN
+			}
 		}
 
 		return current, current.Kind(), nullable
